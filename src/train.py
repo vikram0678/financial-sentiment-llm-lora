@@ -14,6 +14,10 @@ from trl import SFTTrainer
 
 def train():
     # 1. Load Configuration
+    if not os.path.exists("config/config.yaml"):
+        print("❌ Error: config/config.yaml not found!")
+        return
+
     with open("config/config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
@@ -47,7 +51,6 @@ def train():
     tokenizer.padding_side = "right" 
 
     # 5. LoRA Configuration (Requirement: PEFT)
-    # Note: Using Phi-3 specific target modules
     peft_config = LoraConfig(
         r=config['lora_r'],
         lora_alpha=config['lora_alpha'],
@@ -71,35 +74,29 @@ def train():
         learning_rate=float(config['learning_rate']),
         num_train_epochs=config['num_epochs'],
         logging_steps=config['logging_steps'],
-        eval_strategy="steps",        # Modern transformers syntax
-        eval_steps=config['save_steps'],
+        eval_strategy="no",             # Disabled to avoid DynamicCache error
         save_strategy="steps",
-        save_steps=config['save_steps'], # Requirement: Periodic Checkpoints
-        report_to="wandb",              # Requirement: Monitoring integration
-        fp16=True,                      # Mixed precision for speed
+        save_steps=config['save_steps'], 
+        report_to="wandb",              
+        fp16=True,                      
         max_grad_norm=0.3,
         warmup_ratio=0.03,
         lr_scheduler_type="constant",
+        gradient_checkpointing=True     # Saves VRAM
     )
 
     # 8. Initialize SFTTrainer (Requirement: Efficiency)
-    training_args = TrainingArguments(
-        output_dir=config['output_dir'],
-        per_device_train_batch_size=config['batch_size'],
-        gradient_accumulation_steps=config['gradient_accumulation_steps'],
-        learning_rate=float(config['learning_rate']),
-        num_train_epochs=config['num_epochs'],
-        logging_steps=config['logging_steps'],
-            eval_strategy="no",             # Changed from "steps" to "no"
-            save_strategy="steps",
-            save_steps=config['save_steps'], 
-            report_to="wandb",              
-            fp16=True,                      
-            max_grad_norm=0.3,
-            warmup_ratio=0.03,
-            lr_scheduler_type="constant",
-            gradient_checkpointing=True     # Ensure this is True to save memory
-        )
+    # THIS WAS MISSING IN YOUR PREVIOUS VERSION
+    trainer = SFTTrainer(
+        model=model,
+        train_dataset=dataset["train"],
+        eval_dataset=dataset["validation"],
+        peft_config=peft_config,
+        dataset_text_field="text",
+        max_seq_length=config['max_seq_length'],
+        tokenizer=tokenizer,
+        args=training_args,
+    )
 
     # 9. Execute Training
     print("🔥 Starting fine-tuning...")
