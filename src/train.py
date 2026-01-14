@@ -83,16 +83,23 @@ def train():
     )
 
     # 8. Initialize SFTTrainer (Requirement: Efficiency)
-    trainer = SFTTrainer(
-        model=model,
-        train_dataset=dataset["train"],
-        eval_dataset=dataset["validation"],
-        peft_config=peft_config,
-        dataset_text_field="text",
-        max_seq_length=config['max_seq_length'],
-        tokenizer=tokenizer,
-        args=training_args,
-    )
+    training_args = TrainingArguments(
+        output_dir=config['output_dir'],
+        per_device_train_batch_size=config['batch_size'],
+        gradient_accumulation_steps=config['gradient_accumulation_steps'],
+        learning_rate=float(config['learning_rate']),
+        num_train_epochs=config['num_epochs'],
+        logging_steps=config['logging_steps'],
+            eval_strategy="no",             # Changed from "steps" to "no"
+            save_strategy="steps",
+            save_steps=config['save_steps'], 
+            report_to="wandb",              
+            fp16=True,                      
+            max_grad_norm=0.3,
+            warmup_ratio=0.03,
+            lr_scheduler_type="constant",
+            gradient_checkpointing=True     # Ensure this is True to save memory
+        )
 
     # 9. Execute Training
     print("🔥 Starting fine-tuning...")
