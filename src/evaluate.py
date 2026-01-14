@@ -6,7 +6,6 @@ from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 
 def get_prediction(model, tokenizer, text):
-    # Prepare the prompt by removing the assistant's answer
     prompt = text.split("<|assistant|>")[0] + "<|assistant|>\n"
     inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
     
@@ -14,11 +13,10 @@ def get_prediction(model, tokenizer, text):
         outputs = model.generate(
             **inputs, 
             max_new_tokens=10, 
-            temperature=0.1, 
-            do_sample=False
+            do_sample=False,
+            use_cache=False  # <--- Add this line to fix the error
         )
     
-    # Extract only the assistant's response
     full_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
     prediction = full_text.split("assistant")[-1].strip().lower()
     return prediction
@@ -37,10 +35,11 @@ def run_evaluation():
     print("🤖 Evaluating Base Model (Untrained)...")
     base_model = AutoModelForCausalLM.from_pretrained(
         model_id, 
-        torch_dtype=torch.float16, 
+        dtype=torch.float16,  # Changed from torch_dtype to dtype
         device_map="auto",
         trust_remote_code=True
     )
+    base_model.config.use_cache = False # <--- Add this line as well
     
     base_preds = []
     for txt in tqdm(test_samples['text']):
