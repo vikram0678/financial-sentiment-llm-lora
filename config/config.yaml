@@ -4,8 +4,7 @@ lora_r: 16
 lora_alpha: 32
 lora_dropout: 0.05
 # Update this line below:
-target_modules: ["qkv_proj", "o_proj", "gate_up_proj", "down_proj"] 
-
+target_modules: ["qkv_proj", "o_proj", "gate_up_proj", "down_proj"]
 learning_rate: 0.0002
 num_epochs: 1
 batch_size: 4
