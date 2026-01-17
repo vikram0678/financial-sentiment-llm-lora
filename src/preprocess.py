@@ -8,17 +8,26 @@ def run_preprocessing():
 
     # 1. Load Dataset (Requirement: > 1,000 examples)
     # sentences_allagree has ~2,264 high-quality examples
+    # 1. Load Dataset (Requirement: > 1,000 examples)
+    # sentences_allagree has ~2,264 examples
     try:
+        # NEW: Load via the 'parquet' builder to avoid the unsupported .py script
+        print("📥 Downloading dataset in Parquet format...")
         raw_dataset = load_dataset(
             "takala/financial_phrasebank", 
             "sentences_allagree", 
-            split="train", 
-            trust_remote_code=True
+            split="train",
+            revision="refs/pr/10" # This points to the officially converted Parquet version
         )
     except Exception as e:
         print(f"❌ Error loading dataset: {e}")
-        return
-
+        # Secondary Fallback if the PR isn't merged yet
+        print("⚠️ Attempting secondary fallback...")
+        raw_dataset = load_dataset(
+            "parquet", 
+            data_files="https://huggingface.co/datasets/takala/financial_phrasebank/resolve/refs%2Fpr%2F10/sentences_allagree/train-00000-of-00001.parquet",
+            split="train"
+        )
     df = pd.DataFrame(raw_dataset)
 
     # 2. Map labels (0: neg, 1: neu, 2: pos)
